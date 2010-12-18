@@ -1,0 +1,143 @@
+#!/usr/bin/python
+ 
+# face_detect.py
+ 
+# Face Detection using OpenCV. Based on sample code from:
+# http://python.pastebin.com/m76db1d6b
+ 
+# Usage: python detectEyes.py <image_directory>
+# ffmpeg -r 15 -b 1800 -i %2d.JPG -i testSong.mp3 test1800.avi
+# Original pic size: 2816x2112
+ 
+import sys, os, copy, cv
+from PIL import Image
+
+debug = True
+#: The ideal x-component of the position of the midpoint between the eyes
+MID_X_TARGET = 1210
+#: The ideal y-component of the position of the midpoint between the eyes
+MID_Y_TARGET = 825 
+#: The ideal image height
+HEIGHT_TARGET = 1815;
+#: The ideal image width
+WIDTH_TARGET = 2420;
+#: The idea distance between eyes
+EYEW_TARGET = 205
+
+""" Takes an openCV image, a haarcascade XML file, and an int for right(0) or 
+	left(1) eye (image's l/r not yours), returns coords of the eye """
+def getEyeCoords(image, haarFile, side):
+	if debug: print("\tgetEyeCoords, side = " + str(side))
+	cascade = cv.Load(haarFile)
+	eyes = cv.HaarDetectObjects(image, cascade, cv.CreateMemStorage())
+
+	# Several eyes will probably be found. Look at the largest two, if they are close in
+	# size, pick the side=0:leftmost or side=1:rightmost one
+	if eyes:
+		max1 = max2 = (0,0,0,0,0) # x, y, w, h, w*h of largest eyes
+		for (x,y,w,h),n in eyes: # What is n? How does this work?
+			if debug: print("\t\tEye found from (" + str(x)+", "+str(y)+") to ("+str(x+w)+", "+str(y+h)+"), A: "+str(w*h))
+			
+			# max1 will be the largest, max2 second largest
+			if w*h > max1[4]:
+				max2 = max1
+				max1 = (x, y, w, h, w*h)
+			elif w*h > max2[4]:
+				max2 = (x, y, w, h, w*h)
+				
+		if max1[4]-max2[4] < 20000 or max2[4]>=50000: # Mess around to figure out what works
+			# If we're looking for right eyes, pick the leftmost, else pick the rightmost
+			if side == 0:
+				eye = max1 if max1[0] < max2[0] else max2
+			elif side == 1:
+				eye = max1 if max1[0] > max2[0] else max2
+		else:
+			eye = max1
+		
+		return eye
+	else:
+		return None
+
+		
+""" Takes an openCV image, finds the eye positions, and sets ROI appropriately"""
+def cropToEyes(image, saveName):
+	origSize = cv.GetSize(image)
+	rightEye = getEyeCoords(image, '/usr/share/opencv/haarcascades/haarcascade_righteye_2splits.xml', 0)
+	leftEye = getEyeCoords(image, '/usr/share/opencv/haarcascades/haarcascade_lefteye_2splits.xml', 1)
+	if rightEye == None: 
+		print('No right eye found')
+		return
+	else:
+		if debug: print("\tRight eye: " + str(rightEye))
+	if leftEye == None: 
+		print('No left eye found')
+		return
+	else:
+		if debug: print("\tLeft eye: " + str(leftEye))
+	
+	midR = (rightEye[0]+rightEye[2]/2, rightEye[1]+rightEye[3]/2)	# The midpoint of the right eye
+	midL = (leftEye[0]+leftEye[2]/2, leftEye[1]+leftEye[3]/2)		# The midpoint of the left eye
+	mid = (midL[0]/2 + midR[0]/2, midL[1]/2 + midR[1]/2)			# The point between the eyes
+	
+	# Calculate scaling params based on eyeWidth
+	eyeWidth = (midL[0]-midR[0])/2 + 0.0 # Make eyeWidth a double
+	scaleF = EYEW_TARGET/eyeWidth
+	scSize = (int(origSize[0]*scaleF), int(origSize[1]*scaleF))
+	scMid = (mid[0]*scaleF, mid[1]*scaleF)
+	if debug: print('\tEye width: ' + str(eyeWidth))
+	if debug: print('\tScaled size: ' + str(scSize))
+	if debug: print('\tScale factor: ' + str(scaleF))
+	
+	# Scale image
+	scImg = cv.CreateImage(scSize, cv.IPL_DEPTH_8U, 3)
+	cv.Resize(image, scImg, cv.CV_INTER_CUBIC)
+	
+	# Determine translation
+	newCorner = (int(scMid[0]-MID_X_TARGET), int(scMid[1]-MID_Y_TARGET))
+	if debug: print("\tnewCorner: " + str(newCorner))
+	
+	# If any part of the image will be out of bounds, process as PIL
+	if newCorner[0]<0 or newCorner[1]<0 or newCorner[0]>cv.GetSize(scImg)[0]-WIDTH_TARGET or newCorner[1]>cv.GetSize(scImg)[1]-HEIGHT_TARGET:
+		rgbImg = cv.CreateImage(cv.GetSize(scImg), cv.IPL_DEPTH_8U, 3) 			# Create new image with same size, hopefully same depth, 3 channels
+		cv.CvtColor(scImg, rgbImg, cv.CV_BGR2RGB) 								# Convert BGR to RGB
+		
+		pilImg = Image.fromstring("RGB", cv.GetSize(rgbImg), rgbImg.tostring()) # Create PIL image with same data
+		pilImg = pilImg.transform((WIDTH_TARGET,HEIGHT_TARGET), Image.AFFINE, (1,0,newCorner[0],0,1,newCorner[1])) # Transform to final size, position
+		
+		print('Saving to ' + saveName)
+		pilImg.save(saveName)
+		
+	else:
+		# Set scaled ROI, create new image container, put scaled image in it
+		cv.SetImageROI(scImg, (newCorner[0],newCorner[1],WIDTH_TARGET,HEIGHT_TARGET)) # 2nd argument takes corner, w, h, not two points
+		
+		print('Saving to ' + saveName)
+		cv.SaveImage(saveName, scImg)
+		
+def markPoint(img, pt, color=(0,0,255), width=20):
+	polys = [[(pt[0]-width/2, pt[1]-width/2), (pt[0]+width/2, pt[1]-width/2), (pt[0]+width/2, pt[1]+width/2), (pt[0]-width/2, pt[1]+width/2)]]
+	cv.FillPoly(img, polys, color)
+
+def main():
+	# Get input files, sort
+	inputDir = sys.argv[1]
+	files = os.listdir(inputDir)
+	files.sort()
+	
+	i=0
+	# For every JPG in the given directory
+	for file in files:
+		# If a jpeg file
+		if file.upper().endswith('.JPG') or file.upper().endswith('.JPEG'):
+			filePath = os.path.join(inputDir, file)
+			print('Processing ' + filePath)
+			
+			# Open the image, cropToEyes sets ROI wrt eyes
+			image = cv.LoadImage(filePath, 1); # Second argument is for 0:grayscale, 1:color
+			saveName = '/home/rob/facealign/dat/raw/out/%04d.jpg' % i
+			cropToEyes(image, saveName)
+			
+			i = i+1
+ 
+if __name__ == "__main__":
+	main()
