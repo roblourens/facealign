@@ -2,22 +2,24 @@
  
 # sizeToFace.py
  
-# Face Detection using OpenCV. Based on sample code from:
-# http://python.pastebin.com/m76db1d6b
+# Face Detection using OpenCV
  
-# Usage: python sizeToFace.py <image_directory>
+# Usage: python sizeToFace.py <image_directory> optional: <output_directory>
 # ffmpeg -r 15 -b 1800 -i %4d.JPG -i testSong.mp3 test1800.avi
  
-#: The number of processing Threads to spawn
-N_THREADS = 4
-
 import FaceImage
 from multiprocessing import Pool
 import sys, os
+from operator import itemgetter
 
 def main():
     # Get input files, sort by last modified time
     files = sortedImages(sys.argv[1])
+
+    if len(sys.argv) > 2:
+        outdir = sys.argv[2]
+    else:
+        outdir = '.'
     
     i=0
     errors = []
@@ -29,7 +31,7 @@ def main():
         print('Added to pool ' + filepath)
         i += 1
         
-        savename = '/Users/rob/code/facealign/dat/outtest/%04d.jpg' % i
+        savename = os.path.join(outdir, '%04d.jpg' % i)
         pool.apply_async(FaceImage.runFaceImage, (filepath, savename))
  
     pool.close()
@@ -37,12 +39,17 @@ def main():
 
 def sortedImages(inputDir):
     files = []
-    for file in os.listdir(inputDir):
-        if file.upper().endswith('.JPG') or file.upper().endswith('.JPEG'):
-            # If a jpeg file
-            filePath = os.path.join(inputDir, file)
-            files.append((os.stat(filePath).st_mtime, filePath))
+    for dirpath, dirnames, filenames in os.walk(inputDir):
+        for file in filenames:
+            if file.upper().endswith('.JPG') or file.upper().endswith('.JPEG'):
+                # If a jpeg file
+                filePath = os.path.join(dirpath, file)
+                files.append((os.stat(filePath).st_mtime, filePath))
+
+    # Sort by last modified, then by path
+    # (some old pics in my set have an equal recent modified time)
     files.sort()
+    files.sort(key=itemgetter(1))
     return files
 
 if __name__ == "__main__":

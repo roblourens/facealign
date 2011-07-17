@@ -3,9 +3,9 @@ import cv
 DEBUG = True
 markpoints = False
 #: The final image height
-HEIGHT_TARGET = 480;
+HEIGHT_TARGET = 720;
 #: The final image width
-WIDTH_TARGET = 720;
+WIDTH_TARGET = 960;
 #: The target faceWidth:imageHeight
 FACEW_RATIO_TARGET = .6
 #: The ideal distance between eyes
@@ -50,7 +50,6 @@ class FaceImage:
         # Scale image
         scImg = cv.CreateImage(scSize, cv.IPL_DEPTH_8U, 3)
         cv.Resize(self.image, scImg, cv.CV_INTER_CUBIC)
-        cv.SaveImage('/Users/rob/tmp/scaled.jpg', scImg)
         
         # Determine translation. offset: (positive leaves a border, negative doesn't)
         offset = (int(MID_X_TARGET-scMid[0]), int(MID_Y_TARGET-scMid[1]))
