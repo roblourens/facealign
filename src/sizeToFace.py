@@ -16,24 +16,27 @@ def main():
     # Get input files, sort by last modified time
     files = sortedImages(sys.argv[1])
 
+    if len(files) == 0:
+        print('No jpg files found in ' + sys.argv[1])
+        return
+
     if len(sys.argv) > 2:
         outdir = sys.argv[2]
     else:
         outdir = '.'
     
     i=0
-    errors = []
     pool = Pool()
 
     # For every JPG in the given directory
     for file in files:
         filepath = file[1]
-        print('Added to pool ' + filepath)
         i += 1
-        
         savename = os.path.join(outdir, '%04d.jpg' % i)
+
+        print('Added to pool: ' + filepath + ' with output path: ' + savename)
         pool.apply_async(FaceImage.runFaceImage, (filepath, savename))
- 
+
     pool.close()
     pool.join()
 

@@ -1,25 +1,37 @@
 import cv
+import os
+import traceback
 
+#: If True, print debug info
 DEBUG = True
+
+#: If true, will print extra info on the image
 markpoints = False
+
 #: The final image height
 HEIGHT_TARGET = 720;
+
 #: The final image width
 WIDTH_TARGET = 960;
+
 #: The target faceWidth:imageHeight
 FACEW_RATIO_TARGET = .6
+
 #: The ideal distance between eyes
 FACEW_TARGET = FACEW_RATIO_TARGET*HEIGHT_TARGET
-#: The ideal x-component of the position of the midpoint of the face
+
+#: The ideal x and y-components of the position of the midpoint of the face
 MID_X_TARGET = WIDTH_TARGET*.5
-#: The ideal y-component of the position of the midpoint of the face
 MID_Y_TARGET = HEIGHT_TARGET*.5
 
 class FaceImage:
+    """ Represents an image with a face in it, and all the scaling/cropping that goes along with it. """
 
     def __init__(self, imagepath):
+        self.filename = os.path.basename(imagepath)
         self.image = cv.LoadImage(imagepath, 1) # Second argument is for 0:grayscale, 1:color
         self.imagepath = imagepath
+        self.finalImg = None
         self.hcpath = '/opt/local/share/opencv/haarcascades/haarcascade_frontalface_default.xml'
         self.log = ''
 
@@ -32,36 +44,41 @@ class FaceImage:
         if face == None: 
             print('No face found')
             raise Exception('No face found')
-            
+
         # Find the middle of the face, which will be at the center of the final image
         mid = self._faceMidpoint(face)
         self._log('\tFace at: ' + str(mid) + ', should be: (' + str(MID_X_TARGET) + ', ' + str(MID_Y_TARGET) + ')')
         if markpoints:
             self._markFace(face)
-        
+
         # Calculate scaling params based on faceWidth
         faceWidth = float(face[2]) # Make faceWidth a float
         scaleF = FACEW_TARGET/faceWidth
         scSize = (int(origSize[0]*scaleF), int(origSize[1]*scaleF))
         scMid = (mid[0]*scaleF, mid[1]*scaleF)
         self._log('\tFace width: ' + str(faceWidth) + ', should be: ' + str(FACEW_TARGET))
-        self._log('\tScaling to ' + str(scSize))
-        
+        self._log('\tPre-crop scaled size: ' + str(scSize))
+
         # Scale image
         scImg = cv.CreateImage(scSize, cv.IPL_DEPTH_8U, 3)
         cv.Resize(self.image, scImg, cv.CV_INTER_CUBIC)
-        
+
         # Determine translation. offset: (positive leaves a border, negative doesn't)
         offset = (int(MID_X_TARGET-scMid[0]), int(MID_Y_TARGET-scMid[1]))
         self._log("\toffset: " + str(offset))
 
         self.finalImg = crop(scImg, offset, (WIDTH_TARGET, HEIGHT_TARGET))
 
-
     def save(self, outputpath):
+        """ Saves the final image to the specified output path. Creates the path if necessary """
         self._log('Saving as ' + outputpath)
         if self.finalImg == None:
             raise Exception('Final image is uninitialized- run cropToFace first')
+
+        outdir = os.path.dirname(outputpath)
+        if not os.path.exists(outdir):
+            self._log('Creating directory ' + outdir)
+            os.makedirs(outdir)
 
         cv.SaveImage(outputpath, self.finalImg)
 
@@ -74,7 +91,7 @@ class FaceImage:
         # Several faces will be found. Pick the largest.
         if faces:
             largest = (0,0,0,0,0) # x, y, w, h, w*h of largest eyes
-            for (x,y,w,h),n in faces: # What is n? How does this work?
+            for (x,y,w,h),n in faces:
                 self._log("\t\tFace found from (" + str(x)+", "+str(y)+
                 ") to ("+str(x+w)+", "+str(y+h)+"), A: "+str(w*h))
                 if w*h > largest[4]:
@@ -92,10 +109,11 @@ class FaceImage:
         """ Returns the middle of the face """
         return (face[0] + face[2]/2, face[1] + face[3]/2)
 
-    def _log(self, msg):
+    def _log(self, msg, level=1):
         if DEBUG:
             self.log += str(msg)+'\n'
             
+
 def crop(image, offset, size):
     w, h = size
 
@@ -126,15 +144,16 @@ def crop(image, offset, size):
 
 
 def runFaceImage(imagepath, outpath):
-    #try:
-    fi = FaceImage(imagepath)
-    fi.cropToFace()
-    fi.save(outpath)
-    print(fi.log)
+    # exceptions just disappear from multiprocessing.Pool, for some reason
+    try:
+        print('beginning FaceImage run for image path: ' + imagepath)
+        fi = FaceImage(imagepath)
+        fi.cropToFace()
+        fi.save(outpath)
+        print(fi.log)
 
-    #except Exception as e:
-     #   self._log('Incomplete: ' + self.imagepath)
-      #  self._log(type(e))
-       # self._log(e.args)
-        #self._log(e)
-
+    except Exception as e:
+        # print all at once to keep imagepath and stack trace from getting separated by multithreading
+        msg = '*** Incomplete: ' + imagepath + ' ***\n'
+        msg += traceback.format_exc()
+        print(msg)
