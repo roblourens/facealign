@@ -1,28 +1,9 @@
 import cv
 import os
 import traceback
+from config import *
 
-#: If True, print debug info
-DEBUG = True
-
-#: If true, will print extra info on the image
-markpoints = False
-
-#: The final image height
-HEIGHT_TARGET = 720;
-
-#: The final image width
-WIDTH_TARGET = 960;
-
-#: The target faceWidth:imageHeight
-FACEW_RATIO_TARGET = .6
-
-#: The ideal distance between eyes
-FACEW_TARGET = FACEW_RATIO_TARGET*HEIGHT_TARGET
-
-#: The ideal x and y-components of the position of the midpoint of the face
-MID_X_TARGET = WIDTH_TARGET*.5
-MID_Y_TARGET = HEIGHT_TARGET*.5
+HCPATH = os.path.join(HCDIR, HCNAME)
 
 class FaceImage:
     """ Represents an image with a face in it, and all the scaling/cropping that goes along with it. """
@@ -32,7 +13,6 @@ class FaceImage:
         self.image = cv.LoadImage(imagepath, 1) # Second argument is for 0:grayscale, 1:color
         self.imagepath = imagepath
         self.finalImg = None
-        self.hcpath = '/opt/local/share/opencv/haarcascades/haarcascade_frontalface_default.xml'
         self.log = ''
 
     def cropToFace(self):
@@ -85,7 +65,7 @@ class FaceImage:
        
     def _getFaceCoords(self): 
         """ Returns coordinates of the face in this image """
-        cascade = cv.Load(self.hcpath)
+        cascade = cv.Load(HCPATH)
         faces = cv.HaarDetectObjects(self.image, cascade, cv.CreateMemStorage())
 
         # Several faces will be found. Pick the largest.
@@ -133,8 +113,7 @@ def crop(image, offset, size):
         # (The ROI is the opposite of the offset)
         cv.SetImageROI(image, (-offset[0], -offset[1], w, h))
         
-        # 4th arg: 0 for black border, 1 for stretch colors
-        cv.CopyMakeBorder(image, finalImg, useOffset, 1) 
+        cv.CopyMakeBorder(image, finalImg, useOffset, GAP_BORDER) 
 
         return finalImg
 
