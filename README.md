@@ -11,7 +11,7 @@ FaceAlign is a Python script that uses [opencv python bindings](http://opencv.wi
 Usage
 -----
 
-Once python and opencv are installed, open config.py and set HCPATH to the folder containing your opencv installation's Haar cascade files.
+Once python and opencv are installed, open config.py and set HCDIR to the folder containing your opencv installation's Haar cascade files.
 
 Run sizeToFace.py. It takes a required input directory parameter, and an optional output directory parameter. The output directory will be created if it does not already exist. By default, images will be output to the current directory. Output file names will be numbered starting with 0001.jpg.
 
