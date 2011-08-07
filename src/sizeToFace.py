@@ -51,8 +51,7 @@ def sortedImages(inputDir):
 
     # Sort by last modified, then by path
     # (some old pics in my set have an equal recent modified time)
-    files.sort()
-    files.sort(key=itemgetter(1))
+    files.sort(key=itemgetter(0,1))
     return files
 
 if __name__ == "__main__":
