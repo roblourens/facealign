@@ -7,8 +7,11 @@ HCNAME = 'haarcascade_frontalface_default.xml'
 #: If True, print debug info
 DEBUG = True
 
-#: If true, will print extra info on the image
-markpoints = False
+#: If true, will mark the largest face on the image
+MARKPOINTS = False
+
+#: If true, will mark all faces on the image
+MARKALL = False
 
 #: The final image height
 HEIGHT_TARGET = 720;

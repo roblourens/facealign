@@ -28,7 +28,7 @@ class FaceImage:
         # Find the middle of the face, which will be at the center of the final image
         mid = self._faceMidpoint(face)
         self._log('\tFace at: ' + str(mid) + ', should be: (' + str(MID_X_TARGET) + ', ' + str(MID_Y_TARGET) + ')')
-        if markpoints:
+        if MARKPOINTS:
             self._markFace(face)
 
         # Calculate scaling params based on faceWidth
@@ -76,6 +76,9 @@ class FaceImage:
                 ") to ("+str(x+w)+", "+str(y+h)+"), A: "+str(w*h))
                 if w*h > largest[4]:
                     largest = (x, y, w, h, w*h)
+
+                if MARKALL:
+                    self._markFace((x,y,w,h)) 
 
             return largest
         else:
