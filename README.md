@@ -16,6 +16,7 @@ Once python and opencv are installed, open config.py and set HCDIR to the folder
 Run sizeToFace.py. It takes a required input directory parameter, and an optional output directory parameter. The output directory will be created if it does not already exist. By default, images will be output to the current directory. Output file names will be numbered starting with 0001.jpg.
 
 $ python src/sizeToFace.py ../in-images
+
 $ python src/sizeToFace.py ../in-images ../out-images
 
 Eventual plans
