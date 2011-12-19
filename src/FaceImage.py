@@ -2,6 +2,7 @@ import cv
 import os
 import traceback
 from config import *
+from operator import itemgetter
 
 HCPATH = os.path.join(HCDIR, HCNAME)
 
@@ -11,6 +12,7 @@ class FaceImage:
     def __init__(self, imagepath):
         self.filename = os.path.basename(imagepath)
         self.image = cv.LoadImage(imagepath, 1) # Second argument is for 0:grayscale, 1:color
+        self.origSize = cv.GetSize(self.image)
         self.imagepath = imagepath
         self.finalImg = None
         self.log = ''
@@ -19,35 +21,42 @@ class FaceImage:
         """ Takes an openCV image, finds the face position, scales so that the face is the 'ideal'
         size, then crops so that the face is in the center """
         self._log('Starting ' + self.imagepath)
-        origSize = cv.GetSize(self.image)
         face = self._getFaceCoords()
         if face == None: 
-            print('No face found')
+            self._log('No face found')
             raise Exception('No face found')
+        else:
+            self._log(face)
 
         # Find the middle of the face, which will be at the center of the final image
         mid = self._faceMidpoint(face)
         self._log('\tFace at: ' + str(mid) + ', should be: (' + str(MID_X_TARGET) + ', ' + str(MID_Y_TARGET) + ')')
-        if MARKPOINTS:
+        if MARKFACE:
             self._markFace(face)
 
         # Calculate scaling params based on faceWidth
         faceWidth = float(face[2]) # Make faceWidth a float
         scaleF = FACEW_TARGET/faceWidth
-        scSize = (int(origSize[0]*scaleF), int(origSize[1]*scaleF))
+        scSize = (int(self.origSize[0]*scaleF), int(self.origSize[1]*scaleF))
         scMid = (mid[0]*scaleF, mid[1]*scaleF)
         self._log('\tFace width: ' + str(faceWidth) + ', should be: ' + str(FACEW_TARGET))
         self._log('\tPre-crop scaled size: ' + str(scSize))
 
         # Scale image
         scImg = cv.CreateImage(scSize, cv.IPL_DEPTH_8U, 3)
-        cv.Resize(self.image, scImg, cv.CV_INTER_CUBIC)
+        if NOTRANSFORM:
+            scImg = self.image
+        else:
+            cv.Resize(self.image, scImg, cv.CV_INTER_CUBIC)
 
         # Determine translation. offset: (positive leaves a border, negative doesn't)
         offset = (int(MID_X_TARGET-scMid[0]), int(MID_Y_TARGET-scMid[1]))
         self._log("\toffset: " + str(offset))
 
-        self.finalImg = crop(scImg, offset, (WIDTH_TARGET, HEIGHT_TARGET))
+        if NOTRANSFORM:
+            self.finalImg = scImg
+        else:
+            self.finalImg = crop(scImg, offset, (WIDTH_TARGET, HEIGHT_TARGET))
 
     def save(self, outputpath):
         """ Saves the final image to the specified output path. Creates the path if necessary """
@@ -72,10 +81,11 @@ class FaceImage:
         if faces:
             largest = (0,0,0,0,0) # x, y, w, h, w*h of largest eyes
             for (x,y,w,h),n in faces:
+                face = (x, y, w, h, w*h)
                 self._log("\t\tFace found from (" + str(x)+", "+str(y)+
                 ") to ("+str(x+w)+", "+str(y+h)+"), A: "+str(w*h))
-                if w*h > largest[4]:
-                    largest = (x, y, w, h, w*h)
+                imageMidpoint = (self.origSize[0]*MID_X_TARGET_RATIO, self.origSize[1]*MID_Y_TARGET_RATIO)
+                largest = self._bestFace(face, largest, imageMidpoint)
 
                 if MARKALL:
                     self._markFace((x,y,w,h)) 
@@ -83,6 +93,21 @@ class FaceImage:
             return largest
         else:
             return None
+
+    def _bestFace(self, face1, face2, midpoint):
+        # if the sizes of these faces are within .5% of each other, take the 
+        # one nearest midpoint
+        p = .005
+        deltaP = float(abs(face1[4]-face2[4]))/max(face1[4], face2[4]) 
+        if deltaP < p:
+            mid1 = (face1[0]+face1[2]/2, face1[1]+face1[3]/2)
+            mid2 = (face2[0]+face2[2]/2, face2[1]+face2[3]/2)
+            if dist(mid1, midpoint) < dist(mid2, midpoint):
+                return face1
+            else:
+                return face2
+        else:
+            return max(face1, face2, key=itemgetter(4))
 
     def _markFace(self, face, color = (255,0,0)):
         """ Marks the location of the given face onto the image """
@@ -124,6 +149,9 @@ def crop(image, offset, size):
         cv.SetImageROI(image, (-offset[0], -offset[1], w, h))
         return image
 
+def dist(p1, p2):
+    """ Returns the pythagorean distance from p1 to p2 where each is (x, y) """
+    return pow(pow(p1[0]-p2[0], 2) + pow(p1[1]-p2[1], 2), .5)
 
 def runFaceImage(imagepath, outpath):
     # exceptions just disappear from multiprocessing.Pool, for some reason
@@ -138,4 +166,6 @@ def runFaceImage(imagepath, outpath):
         # print all at once to keep imagepath and stack trace from getting separated by multithreading
         msg = '*** Incomplete: ' + imagepath + ' ***\n'
         msg += traceback.format_exc()
+        if fi != None:
+            print(fi.log)
         print(msg)
