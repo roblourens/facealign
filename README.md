@@ -34,19 +34,19 @@ Feedback, ideas, issue reports, and contributions are invited. Welcomed. Demande
 
 Common Errors/Solutions
 -----------------------
-ImportError: No module named cv
+    ImportError: No module named cv
 
 Solution: You have not installed OpenCV or the OpenCV Python bindings
 
 
-Traceback (most recent call last):
- File "<...>/src/facealign/src/FaceImage.py", line 133, in runFaceImage
-   fi.cropToFace()
- File "<...>/src/facealign/src/FaceImage.py", line 23, in cropToFace
-   face = self._getFaceCoords()
- File "<...>/src/facealign/src/FaceImage.py", line 68, in _getFaceCoords
-   cascade = cv.Load(HCPATH)
-TypeError: OpenCV returned NULL
+    Traceback (most recent call last):
+     File "<...>/src/facealign/src/FaceImage.py", line 133, in runFaceImage
+       fi.cropToFace()
+     File "<...>/src/facealign/src/FaceImage.py", line 23, in cropToFace
+       face = self._getFaceCoords()
+     File "<...>/src/facealign/src/FaceImage.py", line 68, in _getFaceCoords
+       cascade = cv.Load(HCPATH)
+    TypeError: OpenCV returned NULL
 
 Solution: This means you have not set your HCDIR variable correctly. Open src/config.py and set HCDIR to
 [yourOpenCVDir]/opencv/data/haarcascades/, for example:
