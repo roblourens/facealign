@@ -27,11 +27,6 @@ Eventual plans
 * Integration with ffmpeg for automatic video generation
 * A GUI
 
-So what's up?
--------------
-
-Feedback, ideas, issue reports, and contributions are invited. Welcomed. Demanded, even. FaceAlign is fairly simple at the moment but I would be interested to hear if you found it useful. 
-
 Common Errors/Solutions
 -----------------------
     ImportError: No module named cv
@@ -51,3 +46,8 @@ Common Errors/Solutions
 **Solution**: This means you have not set your HCDIR variable correctly. Open src/config.py and set HCDIR to
 [yourOpenCVDir]/opencv/data/haarcascades/, for example:
 HCDIR = '/home/doriad/src/OpenCV/opencv/data/haarcascades/'
+
+So what's up?
+-------------
+
+Feedback, ideas, issue reports, and contributions are invited. Welcomed. Demanded, even. FaceAlign is fairly simple at the moment but I would be interested to hear if you found it useful. 
