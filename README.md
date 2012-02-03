@@ -15,9 +15,9 @@ Once python and opencv are installed, open config.py and set HCDIR to the folder
 
 Run sizeToFace.py. It takes a required input directory parameter, and an optional output directory parameter. The output directory will be created if it does not already exist. By default, images will be output to the current directory. Output file names will be numbered starting with 0001.jpg.
 
-$ python src/sizeToFace.py ../in-images
+    $ python src/sizeToFace.py ../in-images
 
-$ python src/sizeToFace.py ../in-images ../out-images
+    $ python src/sizeToFace.py ../in-images ../out-images
 
 Eventual plans
 --------------
@@ -36,7 +36,7 @@ Common Errors/Solutions
 -----------------------
     ImportError: No module named cv
 
-Solution: You have not installed OpenCV or the OpenCV Python bindings
+**Solution**: You have not installed OpenCV or the OpenCV Python bindings
 
 
     Traceback (most recent call last):
@@ -48,6 +48,6 @@ Solution: You have not installed OpenCV or the OpenCV Python bindings
        cascade = cv.Load(HCPATH)
     TypeError: OpenCV returned NULL
 
-Solution: This means you have not set your HCDIR variable correctly. Open src/config.py and set HCDIR to
+**Solution**: This means you have not set your HCDIR variable correctly. Open src/config.py and set HCDIR to
 [yourOpenCVDir]/opencv/data/haarcascades/, for example:
 HCDIR = '/home/doriad/src/OpenCV/opencv/data/haarcascades/'
