@@ -11,10 +11,10 @@ DEBUG = True
 MARKFACE = False
 
 #: If true, will mark all faces on the image
-MARKALL = True
+MARKALL = False
 
 #: If true, don't perform the scale or offset (useful for debugging with MARKALL)
-NOTRANSFORM = True
+NOTRANSFORM = False
 
 #: The final image height
 HEIGHT_TARGET = 720;
