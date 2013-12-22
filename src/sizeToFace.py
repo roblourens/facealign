@@ -4,7 +4,7 @@
  
 # Face Detection using OpenCV
  
-# Usage: python sizeToFace.py <image_directory> optional: <output_directory>
+# Usage: python sizeToFace.py <image_directory> optional: <output_directory> <start_num>,<end_num>
 # ffmpeg -r 15 -b 1800 -i %4d.JPG -i testSong.mp3 test1800.avi
  
 import FaceImage
@@ -13,6 +13,10 @@ import sys, os
 from operator import itemgetter
 
 def main():
+    # Print usage if no args specified
+    if len(sys.argv) == 0:
+        print('Usage: python sizeToFace.py <image_directory> optional: <output_directory> <start_num>,<end_num>')
+
     # Get input files, sort by last modified time
     files = sortedImages(sys.argv[1])
 
@@ -24,8 +28,16 @@ def main():
         outdir = sys.argv[2]
     else:
         outdir = '.'
-    
-    i=0
+
+    start, end = 0, len(files)-1
+    if len(sys.argv) > 3:
+        if ',' in sys.argv[3]:
+            start, end = map(lambda x: int(x)-1, sys.argv[3].split(','))
+        else:
+            start = int(sys.argv[3])-1
+   
+    files = files[start:end+1]
+    i=start
     pool = Pool()
 
     # For every JPG in the given directory
