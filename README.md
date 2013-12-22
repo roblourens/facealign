@@ -1,7 +1,7 @@
 FaceAlign
 ========
 
-FaceAlign is a tool that can be used to align a set of images containing faces. It is particularly useful for creating "time-lapse" face videos, such as this one: http://www.youtube.com/watch?v=iI8xVKO-kow
+FaceAlign is a tool that can be used to align a set of images containing faces. It is particularly useful for creating "time-lapse" face videos, such as this one: http://www.youtube.com/watch?v=aiqKGfIAVCY
 
 How it works
 ------------
