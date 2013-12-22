@@ -14,27 +14,29 @@ from operator import itemgetter
 
 def main():
     # Print usage if no args specified
-    if len(sys.argv) == 0:
+    args = sys.argv[1:]
+    if len(args) == 0:
         print('Usage: python sizeToFace.py <image_directory> optional: <output_directory> <start_num>,<end_num>')
-
-    # Get input files, sort by last modified time
-    files = sortedImages(sys.argv[1])
-
-    if len(files) == 0:
-        print('No jpg files found in ' + sys.argv[1])
         return
 
-    if len(sys.argv) > 2:
-        outdir = sys.argv[2]
+    # Get input files, sort by last modified time
+    files = sortedImages(args[0])
+
+    if len(files) == 0:
+        print('No jpg files found in ' + args[0])
+        return
+
+    if len(sys.argv) > 1:
+        outdir = args[1]
     else:
         outdir = '.'
 
     start, end = 0, len(files)-1
-    if len(sys.argv) > 3:
-        if ',' in sys.argv[3]:
-            start, end = map(lambda x: int(x)-1, sys.argv[3].split(','))
+    if len(args) > 2:
+        if ',' in args[2]:
+            start, end = map(lambda x: int(x)-1, args[2].split(','))
         else:
-            start = int(sys.argv[3])-1
+            start = int(args[2])-1
    
     files = files[start:end+1]
     i=start
