@@ -4,6 +4,7 @@ import numpy
 from operator import itemgetter
 import os
 import traceback
+import math
 
 HC_EYEPAIRPATH = os.path.join(HCDIR, HC_EYEPAIR_NAME)
 HC_LEFTEYEPATH = os.path.join(HCDIR, HC_LEFTEYE_NAME)
@@ -23,6 +24,9 @@ class Point:
         """ Returns the pythagorean distance from this point to p1 """
         return pow(pow(self.x - p1.x, 2) + pow(self.y - p1.y, 2), .5)
 
+    def toTuple(self):
+        return (self.x, self.y)
+
     def __str__(self):
         return '({0}, {1})'.format(self.x, self.y)
 
@@ -37,7 +41,10 @@ class Size:
         elif len(args) == 2:
             self.w = args[0]
             self.h = args[1]
-    
+
+    def toTuple(self):
+        return (self.w, self.h)
+
     def __str__(self):
         return '({0}, {1})'.format(self.w, self.h)
 
@@ -78,7 +85,7 @@ class FaceImage:
         self.image = cv.imread(imagepath)
         self.origSize = Size(self.image)
         self.imagepath = imagepath
-        self.finalImg = None
+        self._finalImg = None
         self.log = ''
 
     def cropToFace(self):
@@ -87,17 +94,20 @@ class FaceImage:
         self._log('Starting ' + self.imagepath)
         eyepair = self._getEyePair()
         lEye, rEye = self._getEyes(eyepair)
+        eyeAngle = 0
 
         # Find the middle of the eyes
         if lEye is not None and rEye is not None:
             mid = Point(rEye.center.x/2.0 + lEye.center.x/2.0,
                         rEye.center.y/2.0 + lEye.center.y/2.0)
             eyewidth = rEye.center.dist(lEye.center)
+            eyeAngle = math.degrees(
+                math.atan(abs(rEye.center.y - lEye.center.y)/abs(rEye.center.x - lEye.center.x)))
         else:
             if eyepair is not None:
                 self._log('No individual eyes found, falling back on eyepair')
                 mid = eyepair.center
-                eyewidth = eyepair.w * EYEPAIR_WIDTH_TO_EYE_WIDTH
+                eyewidth = eyepair.w*EYEPAIR_WIDTH_TO_EYE_WIDTH
             else:
                 self._log('No eyes found, falling back on face')
                 face = self._getFace()
@@ -109,7 +119,7 @@ class FaceImage:
         self._log('Eye mid at: ' + str(mid) + ', should be: ' + str(Point(MID_X_TARGET, MID_Y_TARGET)), 1)
 
         if NOTRANSFORM:
-            self.finalImg = self.image
+            self._finalImg = self.image
             return
 
         # Calculate scaling params
@@ -128,12 +138,20 @@ class FaceImage:
         self._log('Target midpoint: ' + str(Point(MID_X_TARGET, MID_Y_TARGET)), 1)
         offset = Point(int(MID_X_TARGET - scMid.x), int(MID_Y_TARGET - scMid.y))
         self._log("offset: " + str(offset), 1)
-        self.finalImg = crop(scImg, offset, Size(WIDTH_TARGET, HEIGHT_TARGET))
+        translatedScaledImage = crop(scImg, offset, Size(WIDTH_TARGET, HEIGHT_TARGET))
+
+        # Rotate
+        if eyeAngle == 0:
+            self._finalImg = translatedScaledImage
+        else:
+            self._log('Rotating to: ' + str(eyeAngle))
+            rotMatrix = cv.getRotationMatrix2D((MID_X_TARGET, MID_Y_TARGET), eyeAngle, 1)
+            self._finalImg = cv.warpAffine(translatedScaledImage, rotMatrix, (WIDTH_TARGET, HEIGHT_TARGET))
 
     def save(self, outputpath):
         """ Saves the final image to the specified output path. Creates the path if necessary """
         self._log('Saving as ' + outputpath)
-        if self.finalImg == None:
+        if self._finalImg == None:
             raise Exception('Final image is uninitialized- run cropToFace first')
 
         outdir = os.path.dirname(outputpath)
@@ -144,7 +162,7 @@ class FaceImage:
         except:
             print(outdir)
 
-        cv.imwrite(outputpath, self.finalImg)
+        cv.imwrite(outputpath, self._finalImg)
 
     def _getEyePair(self):
         cascade = cv.CascadeClassifier(HC_EYEPAIRPATH)
@@ -220,7 +238,7 @@ class FaceImage:
 
         return (lEye, rEye)
 
-    def _getFace(self): 
+    def _getFace(self):
         """ Returns coordinates of the face in this image """
         cascade = cv.CascadeClassifier(HC_FACEPATH)
         faces = toRects(cascade.detectMultiScale(self.image))
@@ -246,7 +264,7 @@ class FaceImage:
         # if the sizes of these faces are within .5% of each other, take the 
         # one nearest midpoint
         p = .005
-        deltaP = float(abs(f1.a - f2.a))/max(f1.a, f2.a) 
+        deltaP = float(abs(f1.a - f2.a))/max(f1.a, f2.a)
         imageMidpoint = Point(self.origSize.w*MID_X_TARGET_RATIO, self.origSize.h*MID_Y_TARGET_RATIO)
         if deltaP < p:
             return f1 if f1.center.dist(imageMidpoint) < f2.center.dist(imageMidpoint) else f2
@@ -266,12 +284,12 @@ class FaceImage:
             (int(p.x) + pointSize/2, int(p.y) + pointSize/2),
             color,
             cv.cv.CV_FILLED)
-        
+
 
     def _log(self, msg, level=0):
         if DEBUG:
             self.log += '  '*level + str(msg) + '\n'
-            
+
 def toRects(cvResults):
     return [Rect(result) for result in cvResults]
 
@@ -297,7 +315,7 @@ def crop(image, offset, size):
         #p1 = Point(-offset.x, -offset.y)
         #p2 = Point(p1.x + size.w, p1.y + size.h)
         #image = image[p1.y:p2.y, p1.x:p2.x]
-        
+
         # finalImg = cv.cv.CreateImage((size.w, size.h), cv.IPL_DEPTH_8U, 3)
         print(offsTop)
         print(offsBottom)
@@ -310,12 +328,12 @@ def crop(image, offset, size):
         offsLeft = max(0, offsLeft)
         offsRight = max(0, offsRight)
 
-        finalImg = cv.copyMakeBorder(image, offsTop, offsBottom, offsLeft, offsRight, GAP_BORDER) 
+        finalImg = cv.copyMakeBorder(image, offsTop, offsBottom, offsLeft, offsRight, GAP_BORDER)
 
         return finalImg
 
     else:
-        return image[-offset.x:-offset.x + size.w, -offset.y:-offset.y + size.h]
+        return image[-offset.y:-offset.y + size.h, -offset.x:-offset.x + size.w]
 
 def runFaceImage(imagepath, outpath):
     # exceptions just disappear from multiprocessing.Pool, for some reason
