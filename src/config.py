@@ -13,18 +13,6 @@ HC_RIGHTEYE_NAME = 'haarcascade_righteye_2splits.xml'
 #: The name of the face Haar cascade file to use
 HC_FACE_NAME = 'haarcascade_frontalface_alt2.xml'
 
-#: If True, print debug info
-DEBUG = True
-
-#: If true, will mark on the image the eyes/eyepairs which were selected to be used for calculations
-MARKUSED = True
-
-#: If true, will mark all eyes/eyepairs on the image
-MARKALL = True
-
-#: If true, don't perform the scale or offset (useful for debugging with MARKALL)
-NOTRANSFORM = False
-
 #: The final image height
 HEIGHT_TARGET = 720
 
@@ -33,6 +21,54 @@ WIDTH_TARGET = 960
 
 #: What is used when the image must be offset too far? 0 for black border, 1 for stretch colors
 GAP_BORDER = 1
+
+
+
+# Debugging parameters
+
+#: If True, print debug info
+DEBUG = True
+
+#: If true, will mark on the image the eyes/eyepairs which were selected to be used for calculations
+MARKUSED = False
+
+#: If true, will mark all eyes/eyepairs on the image
+MARKALL = False
+
+#: If true, don't perform the scale, offset, rotation (useful for debugging with MARKALL)
+NOTRANSFORM = False
+
+#: If true, skip individual eye/eyepair detection, and go to face detection
+FORCE_FULL_FACE = True
+
+
+
+# Face characteristics, may need to be tweaked per face
+
+#: An eyepair is probably valid with this width/height ratio
+EYEPAIR_RATIO = 2
+
+#: Conversion factor between the width of an eyepair and the width between eyes,
+# used when valid eyes are not detected and the eyepair is used to calculate scaling factors
+EYEPAIR_WIDTH_TO_EYE_WIDTH = .6
+
+#: The minimum distance threshold for left/right eye. Usually just necessary to
+# ensure that detected left/right eyes w/o eyepair are not the same eye
+EYE_MIN_DISTANCE = .05
+
+#: Conversion factor from the height of a detected face to the eyes midpoint.
+# Used when falling back on face detection from eye detection
+FACE_HEIGHT_TO_EYE_MID = .4
+
+#: Conversion factor from the width of a face to the eye width.
+# Used when falling back on face detection from eye detection
+FACE_WIDTH_TO_EYE_WIDTH = .41
+
+#: The minimum size detection threshold for eyepair as a fraction of the image size
+EYEPAIR_MIN_SIZE = (.15, .03)
+
+#: The maximum size detection threshold for eyepair as a fraction of the image size
+EYEPAIR_MAX_SIZE = (.55, 1)
 
 
 
@@ -71,24 +107,5 @@ MID_Y_TARGET_RATIO = .4
 MID_X_TARGET = WIDTH_TARGET*MID_X_TARGET_RATIO
 MID_Y_TARGET = HEIGHT_TARGET*MID_Y_TARGET_RATIO
 
-#: An eyepair is probably valid with this width/height ratio
-EYEPAIR_RATIO = 2
-
-#: Conversion factor between the width of an eyepair and the width between eyes, 
-# used when valid eyes are not detected and the eyepair is used to calculate scaling factors
-EYEPAIR_WIDTH_TO_EYE_WIDTH = .7
-
-#: The minimum size detection threshold for eyepair
-EYEPAIR_MIN_SIZE = (.15, .03)
-
-#: The minimum distance threshold for left/right eye. Usually just necessary to
-# ensure that detected left/right eyes w/o eyepair are not the same eye
-EYE_MIN_DISTANCE = .05
-
-#: The estimated y-coordinate of an eye on the face
-# Used when we fall back on face detection from eye detection
-EYE_FACE_RELATIVE_Y = .5
-
-#: The estimated width of an eyepair relative to the face
-# Used when we fall back on face detection from eye detection
-EYE_FACE_RELATIVE_WIDTH = .8
+#: Reject a left/right pair of eyes if one is larger by this factor or more
+EYE_MAX_SIZE_DIFFERENCE = 2

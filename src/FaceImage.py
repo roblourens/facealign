@@ -92,9 +92,12 @@ class FaceImage:
         """ Finds the face position of the OpenCV image, scales so that the face is the 'ideal'
         size, then crops so that the face is in the center """
         self._log('Starting ' + self.imagepath)
-        eyepair = self._getEyePair()
-        lEye, rEye = self._getEyes(eyepair)
-        eyeAngle = 0
+        eyepair = None
+        lEye = rEye = None
+
+        if not FORCE_FULL_FACE:
+            eyepair = self._getEyePair()
+            lEye, rEye = self._getEyes(eyepair)
 
         # Find the middle of the eyes
         if lEye is not None and rEye is not None:
@@ -102,8 +105,9 @@ class FaceImage:
                         rEye.center.y/2.0 + lEye.center.y/2.0)
             eyewidth = rEye.center.dist(lEye.center)
             eyeAngle = math.degrees(
-                math.atan(abs(rEye.center.y - lEye.center.y)/abs(rEye.center.x - lEye.center.x)))
+                math.atan((rEye.center.y - lEye.center.y)/(rEye.center.x - lEye.center.x)))
         else:
+            eyeAngle = 0
             if eyepair is not None:
                 self._log('No individual eyes found, falling back on eyepair')
                 mid = eyepair.center
@@ -111,9 +115,10 @@ class FaceImage:
             else:
                 self._log('No eyes found, falling back on face')
                 face = self._getFace()
-                mid = Point(face.center.x, (face.y + face.h)*EYE_FACE_RELATIVE_Y)
-                eyewidth = face.w*EYE_FACE_RELATIVE_WIDTH
-                self._markPoint(mid, MIDPOINT_COLOR)
+                mid = Point(face.center.x, face.h*FACE_HEIGHT_TO_EYE_MID + face.y)
+                eyewidth = face.w*FACE_WIDTH_TO_EYE_WIDTH
+                if MARKUSED or MARKALL:
+                    self._markPoint(mid, MIDPOINT_COLOR)
 
         self._log('', 1)
         self._log('Eye mid at: ' + str(mid) + ', should be: ' + str(Point(MID_X_TARGET, MID_Y_TARGET)), 1)
@@ -168,7 +173,9 @@ class FaceImage:
         cascade = cv.CascadeClassifier(HC_EYEPAIRPATH)
         minSize = (int(EYEPAIR_MIN_SIZE[0]*self.origSize.w),
                    int(EYEPAIR_MIN_SIZE[1]*self.origSize.h))
-        eyepairs = toRects(cascade.detectMultiScale(self.image, minSize=minSize))
+        maxSize = (int(EYEPAIR_MAX_SIZE[0]*self.origSize.w),
+                   int(EYEPAIR_MAX_SIZE[1]*self.origSize.h))
+        eyepairs = toRects(cascade.detectMultiScale(self.image, minSize=minSize, maxSize=maxSize))
 
         if not eyepairs:
             return None
@@ -230,6 +237,12 @@ class FaceImage:
         minEyeDist = EYE_MIN_DISTANCE*self.origSize.w
         if eyeDist < minEyeDist:
             self._log('Eyes too close, rejected - %d, should be %d' % (eyeDist, minEyeDist))
+            return (None, None)
+
+        # Throw out the eyes if they differ in size too much
+        eyeSizeDiff = max(lEye.a, rEye.a)/min(lEye.a, rEye.a)
+        if eyeSizeDiff >= EYE_MAX_SIZE_DIFFERENCE:
+            self._log('Eyes too different in size, rejected - %d vs %d' % (lEye.a, rEye.a))
             return (None, None)
 
         if MARKUSED:
@@ -304,25 +317,12 @@ def crop(image, offset, size):
        offset.y + imageSize.h < size.h:
 
         # offset may have negative values, if there will be a right/bottom border
-        useOffset = (max(0, offset.x), max(0, offset.y))
         offsTop = offset.y
         offsBottom = -(offset.y + imageSize.h - size.h)
         offsLeft = offset.x
         offsRight = -(offset.x + imageSize.w - size.w)
 
-        # Need to crop first as CopyMakeBorder will complain if the source is too big for the destination
-        # (The ROI is the opposite of the offset)
-        #p1 = Point(-offset.x, -offset.y)
-        #p2 = Point(p1.x + size.w, p1.y + size.h)
-        #image = image[p1.y:p2.y, p1.x:p2.x]
-
-        # finalImg = cv.cv.CreateImage((size.w, size.h), cv.IPL_DEPTH_8U, 3)
-        print(offsTop)
-        print(offsBottom)
-        print(offsLeft)
-        print(offsRight)
-
-        image = image[max(0, -offset.x):min(-offset.x + size.w, size.w), max(0, -offset.y):min(-offset.y + size.h, size.h)]
+        image = image[max(0, -offset.y):min(-offset.y + size.h, imageSize.h), max(0, -offset.x):min(-offset.x + size.w, imageSize.w)]
         offsTop = max(0, offsTop)
         offsBottom = max(0, offsBottom)
         offsLeft = max(0, offsLeft)

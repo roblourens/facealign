@@ -11,6 +11,7 @@ import FaceImage
 from multiprocessing import Pool
 import sys, os
 from operator import itemgetter
+from PIL import Image
 
 def main():
     # Print usage if no args specified
@@ -57,16 +58,20 @@ def main():
 def sortedImages(inputDir):
     files = []
     for dirpath, dirnames, filenames in os.walk(inputDir):
-        for file in filenames:
-            if file.upper().endswith('.JPG') or file.upper().endswith('.JPEG'):
-                # If a jpeg file
-                filePath = os.path.join(dirpath, file)
-                files.append((os.stat(filePath).st_mtime, filePath))
+        for filename in filenames:
+            if filename.upper().endswith('.JPG') or filename.upper().endswith('.JPEG'):
+                filePath = os.path.join(dirpath, filename)
+                files.append((getImageDate(filePath), filePath))
 
     # Sort by last modified, then by path
     # (some old pics in my set have an equal recent modified time)
     files.sort(key=itemgetter(0,1))
     return files
+
+def getImageDate(filePath):
+    """ This returns the date as a formatted string like yyyy:mm:dd hh:mm:ss. Which is good enough for sorting. """
+    DateTimeOriginalKey = 36867
+    return Image.open(filePath)._getexif()[DateTimeOriginalKey]
 
 if __name__ == "__main__":
     main()
