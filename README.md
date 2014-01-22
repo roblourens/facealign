@@ -1,7 +1,7 @@
 FaceAlign
 ========
 
-FaceAlign is a tool that can be used to align a set of images containing faces. It is particularly useful for creating "time-lapse" face videos, such as this one: http://www.youtube.com/watch?v=aiqKGfIAVCY
+FaceAlign is a tool that can be used to align a set of images containing faces. It is particularly useful for creating "time-lapse" face videos, such as this one : http://youtube.com/watch?v=7SXErQ4eYGU
 
 How it works
 ------------
@@ -22,7 +22,6 @@ Run sizeToFace.py. It takes a required input directory parameter, and an optiona
 Eventual plans
 --------------
 
-* Originally, I planned to detect each eye so that the image could be rotated in addition to scaled and translated. This was abandoned due to some complications including reflections in my glasses screwing up opencv's eye detection. I still hope to make this work, or at least detect a failure and fall back on face detection.
 * Brightness/contrast normalization
 * Integration with ffmpeg for automatic video generation
 * A GUI
